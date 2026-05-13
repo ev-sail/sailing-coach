@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sailing Coach AI</title>
+<style>
+:root {
+  --bg: #07111f; --s1: #0c1a2e; --s2: #112240; --s3: #1a3155;
+  --accent: #0ea5e9; --accent2: #38bdf8;
+  --green: #22c55e; --yellow: #f59e0b; --red: #ef4444;
+  --text: #e8f4ff; --muted: #6b90b8; --border: #1e3a5f; --r: 12px;
+  --font: 'Georgia', serif; --mono: 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+header { background: linear-gradient(180deg,#0a1628,#07111f); border-bottom: 1px solid var(--border); padding: 12px 16px; position: sticky; top: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-logo { font-size: 28px; }
+.header-title { font-size: 18px; font-weight: 700; }
+.online-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: var(--mono); padding: 3px 8px; border-radius: 20px; font-weight: 700; margin-left: 8px; }
+.online-status.on { background: #052e16; color: var(--green); border: 1px solid var(--green); }
+.online-status.off { background: #2d1a00; color: var(--yellow); border: 1px solid var(--yellow); }
+.header-right { display: flex; gap: 8px; }
+.hdr-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 66px; height: 66px; border-radius: 12px; border: 1px solid var(--border); background: var(--s2); cursor: pointer; font-size: 24px; color: var(--text); position: relative; }
+.hdr-btn .hl { font-size: 12px; font-weight: 700; font-family: var(--mono); color: var(--muted); }
+.badge { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: none; align-items: center; justify-content: center; font-family: var(--mono); }
+.badge.on { display: flex; }
+
+.breadcrumb { background: var(--s1); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; overflow-x: auto; white-space: nowrap; }
+.bc-item { color: var(--muted); cursor: pointer; }
+.bc-item.active { color: var(--text); font-weight: 700; cursor: default; }
+.bc-sep { color: var(--border); }
+
+.screen { display: none; max-width: 680px; margin: 0 auto; padding: 16px; }
+.screen.active { display: block; }
+
+.card { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; margin-bottom: 14px; }
+.card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent); font-family: var(--mono); margin-bottom: 14px; }
+
+.field { margin-bottom: 14px; }
+.field label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); display: block; margin-bottom: 6px; }
+.field input, .field select, .field textarea { width: 100%; background: var(--s2); border: 2px solid var(--border); border-radius: 10px; color: var(--text); padding: 13px 16px; font-size: 17px; font-weight: 600; font-family: var(--font); appearance: none; -webkit-appearance: none; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+.field-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.field-row .field { flex: 1; margin-bottom: 0; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700; font-family: var(--mono); transition: all .15s; }
+.btn:active { transform: scale(.96); }
+.btn-primary { background: linear-gradient(135deg,#0ea5e9,#0369a1); color: white; width: 100%; font-size: 17px; padding: 18px; }
+.btn-secondary { background: var(--s2); border: 1px solid var(--border); color: var(--muted); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: #2d0a0a; border: 1px solid var(--red); color: var(--red); }
+.btn-green { background: #052e16; border: 1px solid var(--green); color: var(--green); }
+.btn-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.btn-row .btn { flex: 1; }
+
+.toggle { display: flex; background: var(--s2); border-radius: 10px; padding: 4px; border: 2px solid var(--border); margin-bottom: 14px; }
+.toggle button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 700; font-family: var(--mono); background: transparent; color: var(--muted); }
+.toggle button.on { background: var(--accent); color: white; }
+
+.list-item { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.list-item:hover { border-color: var(--accent); }
+.li-main { font-size: 16px; font-weight: 700; }
+.li-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 3px; }
+.li-arrow { color: var(--muted); font-size: 18px; }
+
+/* Events list */
+.event-card { background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; }
+.event-card:hover { border-color: var(--accent); }
+.event-card-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.event-card-title { font-size: 17px; font-weight: 800; }
+.event-card-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+.event-action-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 14px; padding: 6px 10px; cursor: pointer; }
+.event-action-btn.del-event { color: var(--red); border-color: var(--red); }
+.event-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; font-family: var(--mono); margin-right: 6px; }
+.event-badge.reg { background: #052e16; color: var(--green); border: 1px solid var(--green); }
+.event-badge.all { background: #2d1a00; color: var(--yellow); border: 1px solid var(--yellow); }
+
+.dot-row { display: flex; align-items: center; gap: 10px; background: var(--s2); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.dot-label { font-size: 14px; font-weight: 700; font-family: var(--mono); width: 130px; flex-shrink: 0; }
+.dot-group { display: flex; gap: 8px; }
+.dot { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; opacity: .3; border: 2px solid transparent; }
+.dot.g { background: #052e16; border-color: var(--green); }
+.dot.y { background: #2d1a00; border-color: var(--yellow); }
+.dot.r { background: #2d0a0a; border-color: var(--red); }
+.dot.on { opacity: 1; transform: scale(1.15); }
+.zona-sel { background: var(--s2); border: 2px solid var(--border); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 18px; font-weight: 700; font-family: var(--mono); appearance: none; -webkit-appearance: none; cursor: pointer; flex: 1; }
+.boa-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.boa-label { font-size: 16px; font-weight: 800; font-family: var(--mono); color: var(--accent2); width: 36px; flex-shrink: 0; }
+.boa-input { flex: 1; background: var(--s2); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); padding: 9px 12px; font-size: 15px; font-family: var(--font); }
+.boa-ts { font-size: 11px; color: var(--muted); font-family: var(--mono); width: 44px; text-align: right; cursor: pointer; flex-shrink: 0; }
+
+.athlete-card { background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.athlete-card-name { font-size: 17px; font-weight: 800; color: var(--accent2); padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+.rec-area { background: var(--s2); border-radius: 12px; border: 1px dashed var(--border); padding: 24px; text-align: center; }
+.rec-circle { width: 88px; height: 88px; border-radius: 50%; border: none; cursor: pointer; font-size: 34px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+.rec-circle.idle { background: #ef444418; border: 2px solid var(--red); }
+.rec-circle.rec { background: var(--red); animation: pulse 1s infinite; }
+.rec-circle.pause { background: #f59e0b20; border: 2px solid var(--yellow); }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 #ef444455} 50%{box-shadow:0 0 0 14px transparent} }
+.rec-status { font-size: 15px; color: var(--muted); font-family: var(--mono); margin-bottom: 6px; }
+.rec-timer { font-size: 28px; font-weight: 700; font-family: var(--mono); display: none; margin-bottom: 10px; }
+.rec-btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.rec-sm-btn { background: transparent; border-radius: 8px; font-size: 13px; padding: 8px 18px; cursor: pointer; font-weight: 700; font-family: var(--mono); }
+.rec-sm-btn.stop { border: 1px solid var(--red); color: var(--red); display: none; }
+.rec-sm-btn.stop.show { display: inline-flex; }
+.rec-sm-btn.reset { border: 1px solid var(--border); color: var(--muted); }
+.rec-saved { background: #052e16; border: 1px solid var(--green); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--green); font-family: var(--mono); margin-top: 10px; display: none; }
+.audio-saved-card { background: var(--s2); border: 1px solid var(--yellow); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+.audio-saved-title { font-size: 12px; font-weight: 700; color: var(--yellow); font-family: var(--mono); margin-bottom: 6px; }
+.audio-player { width: 100%; margin: 8px 0; }
+.transcribe-btn { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; font-family: var(--mono); cursor: pointer; width: 100%; }
+
+.overlay { display: none; position: fixed; inset: 0; background: #000c; z-index: 300; align-items: flex-end; }
+.overlay.on { display: flex; }
+.sheet { background: var(--s1); border-radius: 16px 16px 0 0; border: 1px solid var(--border); padding: 20px 16px 32px; width: 100%; max-height: 85vh; overflow-y: auto; }
+.sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.sheet-sub { font-size: 13px; color: var(--muted); font-family: var(--mono); margin-bottom: 18px; }
+.bfd-item { background: var(--s2); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; border-left: 3px solid var(--red); }
+.bfd-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.bfd-item-title { font-size: 13px; font-weight: 700; color: var(--red); font-family: var(--mono); }
+.bfd-item-body { font-size: 13px; color: var(--muted); font-family: var(--mono); line-height: 1.4; }
+.bfd-item img { width: 100%; border-radius: 6px; margin-top: 8px; max-height: 160px; object-fit: cover; }
+.del-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 18px; padding: 2px 6px; }
+.photo-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.photo-thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
+.photo-add { width: 72px; height: 72px; border-radius: 8px; border: 2px dashed var(--border); background: var(--s2); display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--muted); cursor: pointer; }
+
+.setup-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 400; overflow-y: auto; }
+.setup-screen.on { display: block; }
+.setup-inner { max-width: 500px; margin: 0 auto; padding: 24px 16px 80px; }
+.setup-logo { text-align: center; font-size: 48px; margin-bottom: 8px; }
+.setup-h { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.setup-sub { text-align: center; font-size: 13px; color: var(--muted); font-family: var(--mono); margin-bottom: 28px; }
+.athlete-input-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.athlete-input-row input { flex: 1; background: var(--s2); border: 2px solid var(--border); border-radius: 10px; color: var(--text); padding: 12px 14px; font-size: 16px; font-weight: 600; font-family: var(--font); }
+.athlete-del { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--red); font-size: 18px; padding: 8px 12px; cursor: pointer; }
+.add-athlete-btn { width: 100%; background: var(--s2); border: 2px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 14px; font-weight: 700; padding: 12px; cursor: pointer; font-family: var(--mono); margin-bottom: 14px; }
+.add-athlete-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.rtype-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.rtype-btn { background: var(--s2); border: 2px solid var(--border); border-radius: 10px; padding: 14px 8px; cursor: pointer; text-align: center; }
+.rtype-btn.on { border-color: var(--accent); background: #0ea5e918; }
+.rtype-icon { font-size: 24px; margin-bottom: 6px; }
+.rtype-label { font-size: 12px; font-weight: 700; font-family: var(--mono); }
+.rtype-sub { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+.loading { display: none; text-align: center; padding: 40px; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.atabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.atab { background: var(--s2); border: 2px solid var(--border); border-radius: 8px; padding: 9px 16px; cursor: pointer; font-size: 14px; font-weight: 700; font-family: var(--mono); color: var(--muted); }
+.atab.on { border-color: var(--accent); background: #0ea5e918; color: var(--accent2); }
+.apanel { display: none; }
+.apanel.on { display: block; }
+.flash-pt { display: flex; align-items: flex-start; gap: 12px; background: var(--s1); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid; }
+.flash-pt.pos { border-color: var(--green); }
+.flash-pt.neg { border-color: var(--red); }
+.flash-pt-text { font-size: 15px; font-weight: 600; line-height: 1.4; }
+.flash-obj { background: linear-gradient(135deg,#052e16,#14532d); border: 1px solid var(--green); border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; margin-top: 12px; }
+.flash-obj-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--green); margin-bottom: 4px; font-family: var(--mono); }
+.flash-obj-text { font-size: 16px; font-weight: 700; line-height: 1.4; }
+.score-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+.score-cell { background: var(--s2); border-radius: 8px; padding: 10px 4px; text-align: center; }
+.score-val { font-size: 24px; font-weight: 800; font-family: var(--mono); }
+.score-val.g { color: var(--green); } .score-val.y { color: var(--yellow); } .score-val.r { color: var(--red); }
+.score-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+.tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 3px; font-family: var(--mono); }
+.tag-g { background: #052e16; color: var(--green); border: 1px solid var(--green); }
+.tag-r { background: #2d0a0a; color: var(--red); border: 1px solid var(--red); }
+.empty { text-align: center; padding: 30px 20px; color: var(--muted); font-family: var(--mono); font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+.day-text { font-size: 15px; line-height: 1.8; }
+.sep { height: 1px; background: var(--border); margin: 14px 0; }
+@media(max-width:400px){ .rtype-grid{grid-template-columns:1fr 1fr;} .score-grid{grid-template-columns:repeat(3,1fr);} }
+</style>
+</head>
+<body>
+
+<!-- ═══ SETUP SCREEN ═══ -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-inner">
+    <div class="setup-logo">⛵</div>
+    <div class="setup-h">Nuovo Evento</div>
+    <div class="setup-sub">Configura la sessione</div>
+    <div class="card">
+      <div class="card-title">📋 Dati</div>
+      <div class="field"><label>Nome evento</label><input type="text" id="s-name" placeholder="es. Hyères WC 2026"></div>
+      <div class="field-row">
+        <div class="field"><label>Classe</label>
+          <select id="s-class">
+            <option value="">— Seleziona —</option>
+            <option>ILCA 6</option><option>ILCA 7</option><option>470</option>
+            <option>IQ M</option><option>IQ F</option><option>NACRA 17</option>
+            <option>KITE M</option><option>KITE F</option><option>49er</option><option>FX</option>
+          </select>
+        </div>
+        <div class="field"><label>Data inizio</label><input type="date" id="s-date"></div>
+      </div>
+      <div class="field"><label>Tipo</label>
+        <div class="toggle">
+          <button class="on" id="s-btn-all" onclick="setType('allenamento')">🏋️ Allenamento</button>
+          <button id="s-btn-reg" onclick="setType('regata')">🏆 Regata</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 Atleti</div>
+      <div id="s-athletes"></div>
+      <button class="add-athlete-btn" onclick="addAthlete()">+ Aggiungi atleta</button>
+    </div>
+    <button class="btn btn-primary" onclick="createEvent()">▶ Crea Evento</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="backToEvents()">Annulla</button>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="header-left">
+    <div class="header-logo">⛵</div>
+    <div class="header-title" id="hdrTitle">Sailing Coach AI</div>
+    <span class="online-status on" id="onlineStatus">🟢</span>
+  </div>
+  <div class="header-right" id="hdrActions" style="display:none;">
+    <button class="hdr-btn" onclick="openSheet('notesSheet')">📷<span class="hl">FOTO</span><span class="badge" id="notesBadge">0</span></button>
+    <button class="hdr-btn" onclick="openSheet('bfdSheet')">🚩<span class="hl">BFD</span><span class="badge" id="bfdBadge">0</span></button>
+  </div>
+</header>
+
+<!-- ═══ BREADCRUMB ═══ -->
+<div class="breadcrumb" id="breadcrumb" style="display:none;">
+  <span class="bc-item" onclick="backToEvents()">📋 Eventi</span>
+  <span class="bc-sep">›</span>
+  <span class="bc-item active" id="bc-event">—</span>
+  <span class="bc-sep" id="bc-sep2" style="display:none;">›</span>
+  <span class="bc-item" id="bc-prova" style="display:none;">—</span>
+</div>
+
+<!-- ═══ SCREEN: EVENTI ═══ -->
+<div class="screen active" id="screen-events">
+  <div style="text-align:center;padding:20px 0;">
+    <div style="font-size:36px;">⛵</div>
+    <div style="font-size:18px;font-weight:700;margin-top:4px;">I tuoi eventi</div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Eventi salvati</div>
+    <div id="events-list"></div>
+    <button class="btn btn-primary" style="margin-top:8px;" onclick="newEvent()">+ Nuovo Evento</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="openSheet('exportSheet')">⬇️ Backup</button>
+    <label class="btn btn-secondary" for="import-file" style="cursor:pointer;">⬆️ Carica</label>
+    <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none">
+  </div>
+</div>
+
+<!-- ═══ SCREEN: EVENTO INTERNO (lista prove) ═══ -->
+<div class="screen" id="screen-event">
+  <div class="card" style="padding:14px 16px;">
+    <div style="font-size:18px;font-weight:800;" id="event-title">Evento</div>
+    <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:3px;" id="event-meta">—</div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏁 Prove</div>
+    <div id="provas-list"></div>
+    <button class="btn btn-primary" style="margin-top:8px;" onclick="addProva()">+ Nuova Prova</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Genera Report</div>
+    <div class="rtype-grid">
+      <div class="rtype-btn on" id="rt-flash" onclick="selRtype('flash',this)"><div class="rtype-icon">⚡</div><div class="rtype-label">Inter-Regata</div><div class="rtype-sub">Per punti</div></div>
+      <div class="rtype-btn" id="rt-day" onclick="selRtype('day',this)"><div class="rtype-icon">📊</div><div class="rtype-label">Giornata</div><div class="rtype-sub">Completo</div></div>
+      <div class="rtype-btn" id="rt-event" onclick="selRtype('event',this)"><div class="rtype-icon">📁</div><div class="rtype-label">Evento</div><div class="rtype-sub">Globale</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="generateReport()">⚡ Genera Report</button>
+  </div>
+  <button class="btn btn-secondary" style="width:100%;margin-bottom:60px;" onclick="reopenSetup()">✏️ Modifica evento</button>
+</div>
+
+<!-- ═══ SCREEN: PROVA ═══ -->
+<div class="screen" id="screen-prova">
+  <div class="card">
+    <div class="card-title">📋 Dati Prova</div>
+    <div class="field-row">
+      <div class="field"><label>Prova N°</label><input type="number" id="p-num" min="1" placeholder="1" oninput="saveField('num',this.value)"></div>
+      <div class="field"><label>Vento °</label><input type="number" id="p-vdeg" placeholder="180" oninput="saveField('vdeg',this.value)"></div>
+      <div class="field"><label>Vento nodi</label><input type="number" id="p-vkn" placeholder="12" oninput="saveField('vkn',this.value)"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Corrente °</label><input type="number" id="p-cdeg" placeholder="90" oninput="saveField('cdeg',this.value)"></div>
+      <div class="field"><label>Corrente mt/min</label><input type="number" id="p-ckn" placeholder="15" oninput="saveField('ckn',this.value)"></div>
+      <div class="field"><label>Zona buona</label>
+        <select id="p-zb" onchange="saveField('zb',this.value)">
+          <option value="">—</option><option>1</option><option>2</option><option>3</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎙️ Registrazione</div>
+    <div class="rec-area">
+      <button class="rec-circle idle" id="recBtn" onclick="toggleRec()">🎙️</button>
+      <div class="rec-status" id="recStatus">Premi per registrare</div>
+      <div class="rec-timer" id="recTimer">00:00</div>
+      <div class="rec-btn-row">
+        <button class="rec-sm-btn stop" id="recStop" onclick="stopRec()">⏹ Stop</button>
+        <button class="rec-sm-btn reset" onclick="resetRec()">🗑 Reset</button>
+      </div>
+      <div class="rec-saved" id="recSaved"></div>
+    </div>
+    <div id="audio-saved-slot"></div>
+    <div class="field" style="margin-top:12px;">
+      <label>Oppure scrivi le note</label>
+      <textarea id="p-notes" placeholder="Note testuali..." oninput="saveField('notes',this.value)"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏁 Partenze &amp; Boe per Atleta</div>
+    <div id="athlete-cards"></div>
+  </div>
+
+  <button class="btn btn-green" style="width:100%;margin-bottom:60px;" onclick="saveProva()">💾 Salva Prova</button>
+</div>
+
+<!-- ═══ SCREEN: REPORT ═══ -->
+<div class="screen" id="screen-report">
+  <div class="loading" id="loading"><div class="spinner"></div><div id="loadingMsg" style="font-size:14px;color:var(--muted);font-family:var(--mono);">Analisi in corso...</div></div>
+  <div id="report-output"></div>
+  <button class="btn btn-secondary" style="width:100%;margin-top:8px;margin-bottom:60px;" onclick="backToEvent()">← Torna all'evento</button>
+</div>
+
+<!-- ═══ SHEETS ═══ -->
+<div class="overlay" id="bfdSheet" onclick="if(event.target===this)closeSheet('bfdSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🚩 BFD</div>
+    <div class="sheet-sub">Registra o fotografa</div>
+    <div class="field"><label>Nota / Pettorina</label><input type="text" id="bfd-note" placeholder="es. Prova 3 — pettorina 14"></div>
+    <div class="btn-row">
+      <button class="btn btn-danger" id="bfdRecBtn" onclick="toggleBfdRec()">🎙️ Registra</button>
+      <label class="btn btn-secondary" for="bfd-photo-input" style="cursor:pointer;">📷 Foto</label>
+      <input type="file" id="bfd-photo-input" accept="image/*" capture="environment" style="display:none" onchange="addBfdPhoto(event)">
+    </div>
+    <div id="bfd-rec-status" style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:10px;display:none;"></div>
+    <button class="btn btn-primary" onclick="saveBfd()">🚩 Salva BFD</button>
+    <div class="sep"></div>
+    <div id="bfd-list"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="closeSheet('bfdSheet')">Chiudi</button>
+  </div>
+</div>
+
+<div class="overlay" id="notesSheet" onclick="if(event.target===this)closeSheet('notesSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📷 Note &amp; Foto</div>
+    <div class="sheet-sub">Note rapide e foto</div>
+    <div class="field"><label>Nota rapida</label><textarea id="note-text" placeholder="Scrivi una nota..." style="min-height:70px;"></textarea></div>
+    <div class="photo-row" id="note-photo-row">
+      <label class="photo-add" for="note-photo-input">📷</label>
+      <input type="file" id="note-photo-input" accept="image/*" capture="environment" style="display:none" onchange="addNotePhoto(event)">
+    </div>
+    <button class="btn btn-primary" onclick="saveNote()" style="margin-bottom:12px;">➕ Aggiungi</button>
+    <div id="notes-list"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="closeSheet('notesSheet')">Chiudi</button>
+  </div>
+</div>
+
+<div class="overlay" id="exportSheet" onclick="if(event.target===this)closeSheet('exportSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">💾 Backup</div>
+    <div class="sheet-sub">Salva o carica tutti gli eventi</div>
+    <button class="btn btn-primary" onclick="exportData()" style="margin-bottom:10px;">⬇️ Scarica backup JSON</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="closeSheet('exportSheet')">Chiudi</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ════════ STATE ════════
+var db = { events: [], currentEventId: null };
+var ui = {
+  setupAthletes: [''],
+  setupType: 'allenamento',
+  currentProva: null,
+  editingEventId: null,
+  reportType: 'flash'
+};
+
+// Recording state
+var isRec = false, isPaused = false, recMode = null;
+var speechRec = null, mediaRec = null;
+var audioChunks = [], liveTranscript = '', currentTranscript = '';
+var recInterval = null, recSecs = 0;
+
+// BFD / Notes state
+var bfdPendingPhoto = null, bfdRecognition = null, bfdRecActive = false;
+var notePendingPhotos = [];
+
+// ════════ HELPERS ════════
+function getEvent() { return db.events.find(function(e){return e.id===db.currentEventId;}) || null; }
+function saveLS() { try { localStorage.setItem('scDB', JSON.stringify(db)); } catch(e) {} }
+function loadLS() {
+  try {
+    var s = localStorage.getItem('scDB');
+    if (!s) return false;
+    var loaded = JSON.parse(s);
+    if (loaded && loaded.events && Array.isArray(loaded.events)) {
+      db = loaded;
+      // Ensure structure
+      db.events.forEach(function(ev) {
+        if (!ev.athletes) ev.athletes = [];
+        if (!ev.provas) ev.provas = [];
+      });
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function isOnline() { return navigator.onLine; }
+function updateOnline() {
+  var el = document.getElementById('onlineStatus');
+  if (isOnline()) { el.className = 'online-status on'; el.textContent = '🟢'; }
+  else { el.className = 'online-status off'; el.textContent = '🔴'; }
+}
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+
+// ════════ NAVIGATION ════════
+function showScreen(id) {
+  ['events','event','prova','report'].forEach(function(s){
+    document.getElementById('screen-'+s).classList.remove('active');
+  });
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+function backToEvents() {
+  showScreen('events');
+  document.getElementById('breadcrumb').style.display = 'none';
+  document.getElementById('hdrActions').style.display = 'none';
+  document.getElementById('hdrTitle').textContent = 'Sailing Coach AI';
+  document.getElementById('setupScreen').classList.remove('on');
+  renderEventsList();
+}
+
+function backToEvent() {
+  showScreen('event');
+  document.getElementById('bc-sep2').style.display = 'none';
+  document.getElementById('bc-prova').style.display = 'none';
+  document.querySelector('#bc-event').classList.add('active');
+}
+
+// ════════ EVENTS LIST ════════
+function renderEventsList() {
+  var el = document.getElementById('events-list');
+  if (!db.events.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nessun evento.<br>Premi + per iniziare.</div>';
+    return;
+  }
+  var sorted = [].concat(db.events).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  el.innerHTML = '';
+  sorted.forEach(function(ev) {
+    var card = document.createElement('div');
+    card.className = 'event-card';
+    var typeBadge = ev.type === 'regata' ? '<span class="event-badge reg">🏆 REGATA</span>' : '<span class="event-badge all">🏋️ ALLENAMENTO</span>';
+    var nprove = (ev.provas || []).length;
+    card.innerHTML =
+      '<div class="event-card-row">' +
+        '<div onclick="openEvent('+ev.id+')" style="flex:1;">' +
+          typeBadge + '<span class="event-card-title">' + ev.name + '</span>' +
+          '<div class="event-card-meta">' + ev.cls + ' · ' + ev.date + ' · ' + nprove + ' prove · ' + (ev.athletes||[]).length + ' atleti</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button class="event-action-btn" onclick="duplicateEvent('+ev.id+',event)" title="Duplica">📋</button>' +
+          '<button class="event-action-btn del-event" onclick="deleteEvent('+ev.id+',event)">🗑️</button>' +
+        '</div>' +
+      '</div>';
+    el.appendChild(card);
+  });
+}
+
+function newEvent() {
+  ui.editingEventId = null;
+  ui.setupAthletes = [''];
+  ui.setupType = 'allenamento';
+  document.getElementById('s-name').value = '';
+  document.getElementById('s-class').value = '';
+  var t = new Date();
+  document.getElementById('s-date').value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+  setType('allenamento');
+  renderAthleteInputs();
+  document.getElementById('setupScreen').classList.add('on');
+}
+
+function reopenSetup() {
+  var ev = getEvent();
+  if (!ev) return;
+  ui.editingEventId = ev.id;
+  document.getElementById('s-name').value = ev.name;
+  document.getElementById('s-class').value = ev.cls;
+  document.getElementById('s-date').value = ev.date;
+  setType(ev.type);
+  ui.setupAthletes = ev.athletes.length ? [].concat(ev.athletes) : [''];
+  renderAthleteInputs();
+  document.getElementById('setupScreen').classList.add('on');
+}
+
+function setType(t) {
+  ui.setupType = t;
+  document.getElementById('s-btn-all').classList.toggle('on', t==='allenamento');
+  document.getElementById('s-btn-reg').classList.toggle('on', t==='regata');
+}
+
+function renderAthleteInputs() {
+  var el = document.getElementById('s-athletes');
+  el.innerHTML = '';
+  ui.setupAthletes.forEach(function(name, i) {
+    var row = document.createElement('div');
+    row.className = 'athlete-input-row';
+    row.innerHTML = '<input type="text" placeholder="Nome o iniziali" value="' + (name||'') + '" oninput="ui.setupAthletes['+i+']=this.value">' +
+      (ui.setupAthletes.length>1 ? '<button class="athlete-del" onclick="removeAthlete('+i+')">✕</button>' : '');
+    el.appendChild(row);
+  });
+}
+
+function addAthlete() { ui.setupAthletes.push(''); renderAthleteInputs(); }
+function removeAthlete(i) { ui.setupAthletes.splice(i,1); if (!ui.setupAthletes.length) ui.setupAthletes=['']; renderAthleteInputs(); }
+
+function createEvent() {
+  var name = document.getElementById('s-name').value.trim() || 'Sessione';
+  var cls = document.getElementById('s-class').value;
+  if (!cls) { alert('Seleziona una classe.'); return; }
+  var date = document.getElementById('s-date').value || new Date().toISOString().slice(0,10);
+  var athletes = ui.setupAthletes.map(function(n){return (n||'').trim();}).filter(Boolean);
+  if (ui.editingEventId) {
+    var ev = db.events.find(function(e){return e.id===ui.editingEventId;});
+    if (ev) { ev.name=name; ev.cls=cls; ev.type=ui.setupType; ev.date=date; ev.athletes=athletes; }
+  } else {
+    var newEv = { id: Date.now(), name:name, cls:cls, type:ui.setupType, date:date, athletes:athletes, provas:[] };
+    db.events.push(newEv);
+    db.currentEventId = newEv.id;
+  }
+  saveLS();
+  document.getElementById('setupScreen').classList.remove('on');
+  if (ui.editingEventId) openEvent(ui.editingEventId);
+  else openEvent(db.currentEventId);
+}
+
+function deleteEvent(id, e) {
+  if (e) e.stopPropagation();
+  var ev = db.events.find(function(x){return x.id===id;});
+  if (!ev) return;
+  if (!confirm('Eliminare "' + ev.name + '"?')) return;
+  db.events = db.events.filter(function(x){return x.id!==id;});
+  if (db.currentEventId === id) db.currentEventId = null;
+  saveLS();
+  renderEventsList();
+}
+
+function duplicateEvent(id, e) {
+  if (e) e.stopPropagation();
+  var src = db.events.find(function(x){return x.id===id;});
+  if (!src) return;
+  var copy = JSON.parse(JSON.stringify(src));
+  copy.id = Date.now();
+  copy.name = src.name + ' (copia)';
+  copy.provas = [];
+  db.events.push(copy);
+  saveLS();
+  renderEventsList();
+}
+
+// ════════ OPEN EVENT ════════
+function openEvent(id) {
+  db.currentEventId = id;
+  var ev = getEvent();
+  if (!ev) { backToEvents(); return; }
+  document.getElementById('event-title').textContent = ev.name;
+  document.getElementById('event-meta').textContent = ev.type === 'regata' ? '🏆 Regata' : '🏋️ Allenamento';
+  document.getElementById('event-meta').textContent += ' · ' + ev.cls + ' · ' + ev.date;
+  document.getElementById('hdrTitle').textContent = ev.cls;
+  document.getElementById('bc-event').textContent = ev.name;
+  document.getElementById('breadcrumb').style.display = 'flex';
+  document.getElementById('hdrActions').style.display = 'flex';
+  renderProvasList();
+  showScreen('event');
+  saveLS();
+}
+
+function renderProvasList() {
+  var ev = getEvent();
+  var el = document.getElementById('provas-list');
+  if (!ev.provas.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏁</div>Nessuna prova.<br>Premi + per aggiungere.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  ev.provas.forEach(function(p, i) {
+    var item = document.createElement('div');
+    item.className = 'list-item';
+    var vento = p.vdeg && p.vkn ? p.vdeg + '° ' + p.vkn + 'nd' : '—';
+    var words = p.transcript ? p.transcript.split(/\s+/).filter(Boolean).length : 0;
+    var bfds = p.bfds && p.bfds.length ? ' · ' + p.bfds.length + ' BFD' : '';
+    item.innerHTML =
+      '<div><div class="li-main">Prova ' + (p.num||i+1) + '</div>' +
+      '<div class="li-sub">Vento ' + vento + (words?' · '+words+' parole':'') + bfds + '</div></div>' +
+      '<span class="li-arrow">›</span>';
+    item.onclick = function(){ openProva(i); };
+    el.appendChild(item);
+  });
+}
+
+function addProva() {
+  var ev = getEvent();
+  var prova = {
+    id: Date.now(),
+    num: ev.provas.length + 1,
+    vdeg:'', vkn:'', cdeg:'', ckn:'', zb:'',
+    notes:'', transcript:'',
+    audioOffline:null, audioOfflineSize:0,
+    athletes:{}, bfds:[], notesList:[]
+  };
+  (ev.athletes||[]).forEach(function(a){
+    prova.athletes[a] = { zona:'', velstart:null, distlinea:null, liberta:null, boas:{B1:'',P1:'',B2:'',P2:'',F:''} };
+  });
+  ev.provas.push(prova);
+  saveLS();
+  openProva(ev.provas.length - 1);
+}
+
+function openProva(idx) {
+  var ev = getEvent();
+  ui.currentProva = ev.provas[idx];
+  var p = ui.currentProva;
+  document.getElementById('bc-sep2').style.display = '';
+  document.getElementById('bc-prova').style.display = '';
+  document.getElementById('bc-prova').textContent = 'Prova ' + (p.num||idx+1);
+  document.getElementById('bc-event').classList.remove('active');
+  document.getElementById('bc-prova').classList.add('active');
+
+  document.getElementById('p-num').value = p.num||'';
+  document.getElementById('p-vdeg').value = p.vdeg||'';
+  document.getElementById('p-vkn').value = p.vkn||'';
+  document.getElementById('p-cdeg').value = p.cdeg||'';
+  document.getElementById('p-ckn').value = p.ckn||'';
+  document.getElementById('p-zb').value = p.zb||'';
+  document.getElementById('p-notes').value = p.notes||'';
+
+  resetRecUI();
+  currentTranscript = p.transcript || '';
+  if (currentTranscript) {
+    var w = currentTranscript.split(/\s+/).filter(Boolean).length;
+    document.getElementById('recSaved').textContent = '✅ ' + w + ' parole salvate';
+    document.getElementById('recSaved').style.display = 'block';
+  }
+  renderAudioSaved();
+  buildAthleteCards();
+  updateBadges();
+  showScreen('prova');
+}
+
+function saveField(field, value) { if (ui.currentProva) ui.currentProva[field] = value; saveLS(); }
+
+function buildAthleteCards() {
+  var ev = getEvent();
+  var container = document.getElementById('athlete-cards');
+  container.innerHTML = '';
+  if (!ev.athletes.length) {
+    container.innerHTML = '<div class="empty" style="padding:20px 0;">Nessun atleta. Modifica evento per aggiungerli.</div>';
+    return;
+  }
+  ev.athletes.forEach(function(name) {
+    if (!ui.currentProva.athletes[name]) {
+      ui.currentProva.athletes[name] = { zona:'', velstart:null, distlinea:null, liberta:null, boas:{B1:'',P1:'',B2:'',P2:'',F:''} };
+    }
+    var d = ui.currentProva.athletes[name];
+    var card = document.createElement('div');
+    card.className = 'athlete-card';
+    card.innerHTML =
+      '<div class="athlete-card-name">⛵ ' + name + '</div>' +
+      '<div class="dot-row"><span class="dot-label">Zona</span>' +
+        '<select class="zona-sel" onchange="setAD(\''+name+'\',\'zona\',this.value);colorZ(this)">' +
+          '<option value="">—</option>' +
+          '<option style="color:#22c55e">1.1</option><option style="color:#22c55e">1.2</option><option style="color:#22c55e">1.3</option>' +
+          '<option style="color:#f59e0b">2.1</option><option style="color:#f59e0b">2.2</option><option style="color:#f59e0b">2.3</option>' +
+          '<option style="color:#ef4444">3.1</option><option style="color:#ef4444">3.2</option><option style="color:#ef4444">3.3</option>' +
+        '</select></div>' +
+      dotRow(name,'velstart','Velocità Start',d) +
+      dotRow(name,'distlinea','Distanza Linea',d) +
+      dotRow(name,'liberta','Libertà',d) +
+      '<div style="margin-top:10px;">' + boasHTML(name,d) + '</div>';
+    container.appendChild(card);
+    card.querySelector('select').value = d.zona || '';
+    if (d.zona) colorZ(card.querySelector('select'));
+  });
+}
+
+function dotRow(name,field,label,d) {
+  var sel = d[field];
+  return '<div class="dot-row"><span class="dot-label">'+label+'</span><div class="dot-group">' +
+    '<div class="dot g'+(sel==='green'?' on':'')+'" onclick="setADot(\''+name+'\',\''+field+'\',\'green\',this)">🟢</div>' +
+    '<div class="dot y'+(sel==='yellow'?' on':'')+'" onclick="setADot(\''+name+'\',\''+field+'\',\'yellow\',this)">🟡</div>' +
+    '<div class="dot r'+(sel==='red'?' on':'')+'" onclick="setADot(\''+name+'\',\''+field+'\',\'red\',this)">🔴</div>' +
+  '</div></div>';
+}
+
+function boasHTML(name,d) {
+  return ['B1','P1','B2','P2','F'].map(function(b) {
+    var sid = (name+'_'+b).replace(/[^a-zA-Z0-9_]/g,'_');
+    return '<div class="boa-row"><span class="boa-label">'+b+'</span>' +
+      '<input class="boa-input" type="text" id="boa_'+sid+'" value="'+(d.boas[b]||'')+'" placeholder="posizione..." oninput="setABoa(\''+name+'\',\''+b+'\',this.value)">' +
+      '<span class="boa-ts" id="ts_'+sid+'" onclick="stampBoa(\''+name+'\',\''+b+'\')">⏱</span></div>';
+  }).join('');
+}
+
+function setAD(name,field,value) { if (ui.currentProva && ui.currentProva.athletes[name]) { ui.currentProva.athletes[name][field]=value; saveLS(); } }
+function setADot(name,field,color,el) {
+  el.closest('.dot-group').querySelectorAll('.dot').forEach(function(d){d.classList.remove('on');});
+  el.classList.add('on');
+  setAD(name,field,color);
+}
+function setABoa(name,boa,value) { if (ui.currentProva && ui.currentProva.athletes[name]) { ui.currentProva.athletes[name].boas[boa]=value; saveLS(); } }
+function stampBoa(name,boa) {
+  var now = new Date();
+  var t = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  var sid = (name+'_'+boa).replace(/[^a-zA-Z0-9_]/g,'_');
+  var inp = document.getElementById('boa_'+sid);
+  if (inp.value && !inp.value.endsWith(' ')) inp.value += ' ';
+  inp.value += '['+t+']';
+  document.getElementById('ts_'+sid).textContent = t.slice(0,5);
+  setABoa(name,boa,inp.value);
+}
+function colorZ(sel) {
+  var n = parseInt(sel.value);
+  var c = {1:'#22c55e',2:'#f59e0b',3:'#ef4444'};
+  sel.style.borderColor = c[n]||'var(--border)';
+  sel.style.color = c[n]||'var(--text)';
+}
+
+function saveProva() {
+  if (!ui.currentProva) return;
+  ui.currentProva.transcript = currentTranscript;
+  saveLS();
+  backToEvent();
+  renderProvasList();
+}
+
+// ════════ RECORDING (hybrid) ════════
+function toggleRec() {
+  if (!isRec) startRec();
+  else if (!isPaused) pauseRec();
+  else resumeRec();
+}
+
+function startRec() {
+  liveTranscript = '';
+  currentTranscript = '';
+  audioChunks = [];
+  recSecs = 0;
+  isRec = true; isPaused = false;
+  recMode = isOnline() ? 'speech' : 'audio';
+  if (recMode === 'speech') startSpeechMode();
+  else startAudioMode();
+  startTimer();
+  updateRecBtn();
+}
+
+function startSpeechMode() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { recMode='audio'; startAudioMode(); return; }
+  speechRec = new SR();
+  speechRec.lang = 'it-IT'; speechRec.continuous = true; speechRec.interimResults = true;
+  speechRec.onresult = function(e) {
+    var finalNow = '', interimNow = '';
+    for (var i=0; i<e.results.length; i++) {
+      var t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalNow += t + ' ';
+      else interimNow += t + ' ';
+    }
+    if (finalNow && liveTranscript.indexOf(finalNow.trim()) === -1) liveTranscript += finalNow;
+    currentTranscript = (liveTranscript + interimNow).trim();
+    var w = currentTranscript.split(/\s+/).filter(Boolean).length;
+    document.getElementById('recStatus').textContent = '🔴 ' + w + ' parole';
+  };
+  speechRec.onerror = function(e) { if (e.error==='no-speech'||e.error==='aborted') return; };
+  speechRec.onend = function() { if (isRec && !isPaused && recMode==='speech') { try{speechRec.start();}catch(ex){} } };
+  try { speechRec.start(); } catch(ex) { startAudioMode(); return; }
+  document.getElementById('recStatus').textContent = '🔴 In ascolto (online)...';
+}
+
+function startAudioMode() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Microfono non disponibile.'); isRec=false; updateRecBtn(); return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream) {
+    audioChunks = [];
+    mediaRec = new MediaRecorder(stream);
+    mediaRec.ondataavailable = function(e) { if (e.data.size>0) audioChunks.push(e.data); };
+    mediaRec.start(1000);
+    document.getElementById('recStatus').textContent = '🔴 OFFLINE · registrazione audio';
+  }).catch(function(err) {
+    alert('Permesso microfono: ' + err.message);
+    isRec = false; updateRecBtn();
+  });
+}
+
+function pauseRec() {
+  if (recMode==='speech' && speechRec) { speechRec.onend=null; try{speechRec.stop();}catch(e){} }
+  else if (recMode==='audio' && mediaRec && mediaRec.state==='recording') mediaRec.pause();
+  isPaused = true; clearInterval(recInterval); updateRecBtn();
+  document.getElementById('recStatus').textContent = '⏸ Pausa';
+}
+
+function resumeRec() {
+  isPaused = false;
+  if (recMode==='speech') startSpeechMode();
+  else if (recMode==='audio' && mediaRec && mediaRec.state==='paused') mediaRec.resume();
+  startTimer(); updateRecBtn();
+}
+
+function stopRec() {
+  isRec = false; isPaused = false; clearInterval(recInterval);
+  if (recMode==='speech') {
+    if (speechRec) { speechRec.onend=null; try{speechRec.stop();}catch(e){} }
+    if (!currentTranscript.trim()) currentTranscript = liveTranscript.trim();
+    updateRecBtn();
+    var w = currentTranscript.split(/\s+/).filter(Boolean).length;
+    if (ui.currentProva) ui.currentProva.transcript = currentTranscript;
+    saveLS();
+    document.getElementById('recSaved').textContent = w>0 ? '✅ ' + w + ' parole trascritte' : '⚠️ Nessun testo';
+    document.getElementById('recSaved').style.display = 'block';
+    document.getElementById('recStatus').textContent = w>0 ? 'Premi Salva Prova' : 'Riprova';
+  } else if (recMode==='audio') {
+    if (mediaRec) {
+      mediaRec.onstop = function() {
+        var blob = new Blob(audioChunks, {type:'audio/webm'});
+        var reader = new FileReader();
+        reader.onload = function() {
+          if (ui.currentProva) {
+            ui.currentProva.audioOffline = reader.result;
+            ui.currentProva.audioOfflineSize = blob.size;
+            saveLS();
+          }
+          updateRecBtn();
+          var sizeKb = Math.round(blob.size/1024);
+          document.getElementById('recSaved').textContent = '🎵 Audio salvato (' + sizeKb + ' KB)';
+          document.getElementById('recSaved').style.display = 'block';
+          renderAudioSaved();
+        };
+        reader.readAsDataURL(blob);
+        mediaRec.stream.getTracks().forEach(function(t){t.stop();});
+      };
+      mediaRec.stop();
+    }
+  }
+}
+
+function resetRec() {
+  resetRecUI();
+  if (ui.currentProva) {
+    ui.currentProva.transcript = '';
+    ui.currentProva.audioOffline = null;
+    ui.currentProva.audioOfflineSize = 0;
+    saveLS();
+  }
+  renderAudioSaved();
+}
+
+function resetRecUI() {
+  if (speechRec) { speechRec.onend=null; try{speechRec.stop();}catch(e){} }
+  if (mediaRec) { try{mediaRec.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} mediaRec=null; }
+  audioChunks = [];
+  isRec = false; isPaused = false;
+  clearInterval(recInterval);
+  liveTranscript = ''; currentTranscript = '';
+  recSecs = 0;
+  document.getElementById('recTimer').textContent = '00:00';
+  document.getElementById('recTimer').style.display = 'none';
+  document.getElementById('recStatus').textContent = 'Premi per registrare';
+  document.getElementById('recSaved').style.display = 'none';
+  updateRecBtn();
+}
+
+function startTimer() {
+  recInterval = setInterval(function() {
+    recSecs++;
+    var m = String(Math.floor(recSecs/60)).padStart(2,'0');
+    var s = String(recSecs%60).padStart(2,'0');
+    document.getElementById('recTimer').textContent = m+':'+s;
+  }, 1000);
+  document.getElementById('recTimer').style.display = '';
+}
+
+function updateRecBtn() {
+  var btn = document.getElementById('recBtn');
+  var stop = document.getElementById('recStop');
+  if (!isRec) { btn.className='rec-circle idle'; btn.textContent='🎙️'; stop.classList.remove('show'); }
+  else if (isPaused) { btn.className='rec-circle pause'; btn.textContent='▶️'; stop.classList.add('show'); }
+  else { btn.className='rec-circle rec'; btn.textContent='⏸️'; stop.classList.add('show'); }
+}
+
+function renderAudioSaved() {
+  var slot = document.getElementById('audio-saved-slot');
+  slot.innerHTML = '';
+  var p = ui.currentProva;
+  if (!p || !p.audioOffline) return;
+  var sizeKb = Math.round((p.audioOfflineSize||0)/1024);
+  var hasText = p.transcript && p.transcript.trim();
+  slot.innerHTML = '<div class="audio-saved-card">' +
+    '<div class="audio-saved-title">🎵 Audio offline salvato (' + sizeKb + ' KB)' + (hasText?' · ✅ Trascritto':' · ⏳ Da trascrivere') + '</div>' +
+    '<audio class="audio-player" controls src="' + p.audioOffline + '"></audio>' +
+    '</div>';
+}
+
+// ════════ BFD ════════
+function toggleBfdRec() {
+  if (!bfdRecActive) {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Usa Chrome.'); return; }
+    bfdRecActive = true;
+    bfdRecognition = new SR();
+    bfdRecognition.lang='it-IT'; bfdRecognition.continuous=true; bfdRecognition.interimResults=false;
+    bfdRecognition.onresult = function(e) {
+      var t=''; for (var i=0;i<e.results.length;i++) t += e.results[i][0].transcript + ' ';
+      document.getElementById('bfd-rec-status').textContent = t;
+    };
+    bfdRecognition.start();
+    document.getElementById('bfdRecBtn').textContent = '⏹ Stop';
+    document.getElementById('bfd-rec-status').style.display = '';
+  } else {
+    if (bfdRecognition) bfdRecognition.stop();
+    bfdRecActive = false;
+    document.getElementById('bfdRecBtn').textContent = '🎙️ Registra';
+  }
+}
+
+function addBfdPhoto(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { bfdPendingPhoto = ev.target.result; e.target.value=''; alert('Foto aggiunta'); };
+  reader.readAsDataURL(file);
+}
+
+function saveBfd() {
+  var p = ui.currentProva;
+  if (!p) { alert('Apri prima una prova.'); return; }
+  var note = document.getElementById('bfd-note').value.trim();
+  var recText = document.getElementById('bfd-rec-status').textContent.trim();
+  if (!note && !recText && !bfdPendingPhoto) { alert('Inserisci almeno una nota.'); return; }
+  var now = new Date();
+  p.bfds = p.bfds || [];
+  p.bfds.push({ note:note, text:recText, photo:bfdPendingPhoto, ts: String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0') });
+  bfdPendingPhoto = null;
+  document.getElementById('bfd-note').value = '';
+  document.getElementById('bfd-rec-status').textContent = '';
+  if (bfdRecognition) bfdRecognition.stop();
+  bfdRecActive = false;
+  document.getElementById('bfdRecBtn').textContent = '🎙️ Registra';
+  saveLS();
+  renderBfdList();
+  updateBadges();
+}
+
+function renderBfdList() {
+  var p = ui.currentProva;
+  var el = document.getElementById('bfd-list');
+  if (!p || !p.bfds || !p.bfds.length) { el.innerHTML = '<div class="empty" style="padding:16px 0;">Nessun BFD</div>'; return; }
+  el.innerHTML = p.bfds.map(function(b,i) {
+    return '<div class="bfd-item"><div class="bfd-item-head"><span class="bfd-item-title">🚩 BFD #'+(i+1)+' · '+b.ts+'</span><button class="del-btn" onclick="delBfd('+i+')">✕</button></div>' +
+      '<div class="bfd-item-body">'+(b.note?'<div>'+b.note+'</div>':'')+(b.text?'<div>'+b.text+'</div>':'')+'</div>' +
+      (b.photo?'<img src="'+b.photo+'">':'')+'</div>';
+  }).join('');
+}
+
+function delBfd(i) { if (ui.currentProva && ui.currentProva.bfds) { ui.currentProva.bfds.splice(i,1); saveLS(); renderBfdList(); updateBadges(); } }
+
+// ════════ NOTES ════════
+function addNotePhoto(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { notePendingPhotos.push(ev.target.result); renderNotePhotoRow(); e.target.value=''; };
+  reader.readAsDataURL(file);
+}
+
+function renderNotePhotoRow() {
+  var row = document.getElementById('note-photo-row');
+  row.innerHTML = '<label class="photo-add" for="note-photo-input">📷</label>';
+  notePendingPhotos.forEach(function(src,i) {
+    var img = document.createElement('img');
+    img.className = 'photo-thumb'; img.src = src;
+    img.onclick = function(){notePendingPhotos.splice(i,1);renderNotePhotoRow();};
+    row.appendChild(img);
+  });
+}
+
+function saveNote() {
+  var p = ui.currentProva;
+  if (!p) { alert('Apri prima una prova.'); return; }
+  var text = document.getElementById('note-text').value.trim();
+  if (!text && !notePendingPhotos.length) return;
+  p.notesList = p.notesList || [];
+  p.notesList.push({ text:text, photos:[].concat(notePendingPhotos) });
+  notePendingPhotos = [];
+  document.getElementById('note-text').value = '';
+  renderNotePhotoRow();
+  saveLS();
+  renderNotesList();
+  updateBadges();
+}
+
+function renderNotesList() {
+  var p = ui.currentProva;
+  var el = document.getElementById('notes-list');
+  if (!p || !p.notesList || !p.notesList.length) { el.innerHTML = ''; return; }
+  el.innerHTML = p.notesList.map(function(n,i) {
+    return '<div class="bfd-item" style="border-color:var(--accent)"><div class="bfd-item-head"><span style="font-size:12px;color:var(--accent);font-family:var(--mono);">Nota #'+(i+1)+'</span><button class="del-btn" onclick="delNote('+i+')">✕</button></div>' +
+      (n.text?'<div class="bfd-item-body">'+n.text+'</div>':'') +
+      n.photos.map(function(p){return '<img src="'+p+'" style="width:60px;height:60px;object-fit:cover;border-radius:6px;margin:4px 4px 0 0;">';}).join('') + '</div>';
+  }).join('');
+}
+
+function delNote(i) { if (ui.currentProva && ui.currentProva.notesList) { ui.currentProva.notesList.splice(i,1); saveLS(); renderNotesList(); updateBadges(); } }
+
+function updateBadges() {
+  var p = ui.currentProva;
+  var bc = p && p.bfds ? p.bfds.length : 0;
+  var nc = p && p.notesList ? p.notesList.length : 0;
+  var bb = document.getElementById('bfdBadge'); bb.textContent=bc; bb.classList.toggle('on',bc>0);
+  var nb = document.getElementById('notesBadge'); nb.textContent=nc; nb.classList.toggle('on',nc>0);
+}
+
+// ════════ SHEETS ════════
+function openSheet(id) {
+  if (id==='bfdSheet') renderBfdList();
+  if (id==='notesSheet') { renderNotesList(); renderNotePhotoRow(); }
+  document.getElementById(id).classList.add('on');
+}
+function closeSheet(id) { document.getElementById(id).classList.remove('on'); }
+
+// ════════ REPORT ════════
+function selRtype(type, el) {
+  ui.reportType = type;
+  document.querySelectorAll('.rtype-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+}
+
+async function generateReport() {
+  var ev = getEvent();
+  if (!ev || !ev.provas.length) { alert('Nessuna prova salvata.'); return; }
+  showScreen('report');
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('report-output').innerHTML = '';
+  var msgs = ['Analisi in corso...','Elaborazione prove...','Strutturazione...','Quasi pronto...'];
+  var mi = 0;
+  var iv = setInterval(function(){document.getElementById('loadingMsg').textContent=msgs[mi++%msgs.length];}, 1800);
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: buildPrompt() }]
+      })
+    });
+    var data = await res.json();
+    var raw = data.content.map(function(c){return c.text||'';}).join('');
+    var json = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    clearInterval(iv);
+    document.getElementById('loading').style.display = 'none';
+    renderReport(json);
+  } catch(e) {
+    clearInterval(iv);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('report-output').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Errore nella generazione.</div>';
+    console.error(e);
+  }
+}
+
+function buildPrompt() {
+  var ev = getEvent();
+  var t = ui.reportType;
+  var ctx = 'Sei un esperto analista di vela olimpica.\n';
+  ctx += 'Evento: ' + ev.name + ' | Classe: ' + ev.cls + '\n';
+  ctx += 'Atleti seguiti: ' + ev.athletes.join(', ') + '\n\n';
+  ctx += 'PROVE:\n';
+  ev.provas.forEach(function(p, i) {
+    ctx += '--- Prova ' + (p.num||i+1) + ' ---\n';
+    if (p.vdeg||p.vkn) ctx += 'Vento: ' + (p.vdeg||'?') + 'deg ' + (p.vkn||'?') + 'nd\n';
+    if (p.cdeg||p.ckn) ctx += 'Corrente: ' + (p.cdeg||'?') + 'deg ' + (p.ckn||'?') + ' mt/min\n';
+    if (p.zb) ctx += 'Zona buona: ' + p.zb + '\n';
+    if (p.bfds && p.bfds.length) ctx += 'BFD: ' + p.bfds.map(function(b){return b.note||b.text;}).filter(Boolean).join(', ') + '\n';
+    var cl = {green:'VERDE',yellow:'GIALLO',red:'ROSSO'};
+    ev.athletes.forEach(function(name) {
+      var d = p.athletes && p.athletes[name]; if (!d) return;
+      var parts = [];
+      if (d.zona) parts.push('Zona '+d.zona);
+      if (d.velstart) parts.push('VelStart '+cl[d.velstart]);
+      if (d.distlinea) parts.push('DistLinea '+cl[d.distlinea]);
+      if (d.liberta) parts.push('Liberta '+cl[d.liberta]);
+      var boas = ['B1','P1','B2','P2','F'].filter(function(b){return d.boas&&d.boas[b];}).map(function(b){return b+':'+d.boas[b];});
+      ctx += name + ': ' + (parts.length?parts.join(' | '):'-') + (boas.length?' BOE:'+boas.join(','):'') + '\n';
+    });
+    if (p.transcript) ctx += 'REGISTRAZIONE: ' + p.transcript + '\n';
+    if (p.notes) ctx += 'NOTE: ' + p.notes + '\n';
+    ctx += '\n';
+  });
+  var inst = '\nPRODUCI UN REPORT per ogni atleta. ';
+  if (t === 'flash') inst += 'INTER-REGATA per punti: positivi, negativi, obiettivo.\nJSON: {"athletes":[{"name":"nome","positives":["p1","p2"],"negatives":["n1","n2"],"objective":"obiettivo max 20 parole"}]}';
+  else if (t === 'day') inst += 'FINE GIORNATA.\nJSON: {"athletes":[{"name":"nome","scores":[{"label":"Tecnica","value":7,"color":"green"},{"label":"Tattica","value":6,"color":"yellow"},{"label":"Partenze","value":8,"color":"green"},{"label":"Vento","value":5,"color":"yellow"},{"label":"Mentale","value":7,"color":"green"}],"summary":"riepilogo","positives":["p1","p2"],"negatives":["n1","n2"],"tomorrow":"obiettivi domani"}]}';
+  else inst += 'FINE EVENTO.\nJSON: {"athletes":[{"name":"nome","overallSummary":"sintesi","skills":[{"label":"Tecnica","percent":75},{"label":"Tattica","percent":60},{"label":"Partenze","percent":80},{"label":"Vento","percent":55},{"label":"Mentale","percent":70}],"strengths":["f1","f2"],"weaknesses":["d1","d2"],"nextEvent":"raccomandazioni"}]}';
+  inst += '\nRispondi SOLO con JSON valido.';
+  return ctx + inst;
+}
+
+function renderReport(data) {
+  var athletes = data.athletes || [];
+  if (!athletes.length) { document.getElementById('report-output').innerHTML = '<div class="empty">Nessun dato.</div>'; return; }
+  var tabs = '<div class="atabs">' + athletes.map(function(a,i){return '<div class="atab'+(i===0?' on':'')+'" onclick="switchAtab('+i+')">'+(a.name||'A'+(i+1))+'</div>';}).join('') + '</div>';
+  var panels = athletes.map(function(a,i) {
+    var h = ui.reportType==='flash' ? flashHTML(a) : ui.reportType==='day' ? dayHTML(a) : eventHTML(a);
+    return '<div class="apanel'+(i===0?' on':'')+'" id="apanel-'+i+'">'+h+'</div>';
+  }).join('');
+  document.getElementById('report-output').innerHTML = tabs + panels;
+}
+
+function switchAtab(idx) {
+  document.querySelectorAll('.atab').forEach(function(t,i){t.classList.toggle('on',i===idx);});
+  document.querySelectorAll('.apanel').forEach(function(p,i){p.classList.toggle('on',i===idx);});
+}
+
+function flashHTML(a) {
+  var pos = (a.positives||[]).map(function(p){return '<div class="flash-pt pos">✅ <div class="flash-pt-text">'+p+'</div></div>';}).join('');
+  var neg = (a.negatives||[]).map(function(p){return '<div class="flash-pt neg">⚠️ <div class="flash-pt-text">'+p+'</div></div>';}).join('');
+  return '<div class="card"><div style="font-size:20px;font-weight:800;margin-bottom:14px;">'+a.name+'</div>'+pos+neg+'<div class="flash-obj">🎯<div><div class="flash-obj-title">Obiettivo Prossima Prova</div><div class="flash-obj-text">'+(a.objective||'')+'</div></div></div></div>';
+}
+
+function dayHTML(a) {
+  var sc = (a.scores||[]).map(function(s){var c=s.color==='green'?'g':s.color==='yellow'?'y':'r';return '<div class="score-cell"><div class="score-val '+c+'">'+s.value+'/10</div><div class="score-lbl">'+s.label+'</div></div>';}).join('');
+  return '<div class="card"><div style="font-size:20px;font-weight:800;margin-bottom:14px;">'+a.name+'</div>' +
+    '<div class="score-grid" style="margin-bottom:14px;">'+sc+'</div><div class="sep"></div>' +
+    '<p class="day-text">'+(a.summary||'')+'</p><div class="sep"></div>' +
+    '<div>'+(a.positives||[]).map(function(p){return '<span class="tag tag-g">✅ '+p+'</span>';}).join('')+'</div>' +
+    '<div style="margin-top:8px;">'+(a.negatives||[]).map(function(p){return '<span class="tag tag-r">⚠️ '+p+'</span>';}).join('')+'</div>' +
+    '<div class="sep"></div><div class="card-title">🎯 Domani</div><p class="day-text">'+(a.tomorrow||'')+'</p></div>';
+}
+
+function eventHTML(a) {
+  var sk = (a.skills||[]).map(function(s){return '<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:13px;font-family:var(--mono);margin-bottom:4px;"><span>'+s.label+'</span><span>'+s.percent+'%</span></div><div style="background:var(--s2);border-radius:20px;height:8px;overflow:hidden;"><div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--green));width:'+s.percent+'%;"></div></div></div>';}).join('');
+  return '<div class="card"><div style="font-size:20px;font-weight:800;margin-bottom:14px;">'+a.name+'</div>' +
+    '<p class="day-text" style="margin-bottom:14px;">'+(a.overallSummary||'')+'</p>' +
+    '<div class="card-title">Competenze</div>'+sk+'<div class="sep"></div>' +
+    '<div>'+(a.strengths||[]).map(function(s){return '<span class="tag tag-g">💪 '+s+'</span>';}).join('')+'</div>' +
+    '<div style="margin-top:8px;">'+(a.weaknesses||[]).map(function(s){return '<span class="tag tag-r">📍 '+s+'</span>';}).join('')+'</div>' +
+    '<div class="sep"></div><div class="card-title">🔜 Prossimo Evento</div><p class="day-text">'+(a.nextEvent||'')+'</p></div>';
+}
+
+// ════════ EXPORT/IMPORT ════════
+function exportData() {
+  var json = JSON.stringify(db, null, 2);
+  var blob = new Blob([json], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'sailing_coach_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  closeSheet('exportSheet');
+}
+
+function importData(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var loaded = JSON.parse(ev.target.result);
+      if (loaded.events && Array.isArray(loaded.events)) {
+        db = loaded;
+        saveLS();
+        renderEventsList();
+        alert('Backup ripristinato!');
+      } else { alert('File non valido.'); }
+    } catch(ex) { alert('Errore lettura file.'); }
+  };
+  reader.readAsText(file);
+}
+
+// ════════ INIT ════════
+window.addEventListener('DOMContentLoaded', function() {
+  var t = new Date();
+  document.getElementById('s-date').value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  renderAthleteInputs();
+  updateOnline();
+  loadLS();
+  renderEventsList();
+});
+</script>
+</body>
+</html>
